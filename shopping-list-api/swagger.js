@@ -16,7 +16,7 @@ const doc = {
 const outputFile = "./swagger.json";
 
 // IMPORTANT: include BOTH server.js and routes so it picks up your docs
-const endpointsFiles = ["./server.js", "./routes/items.js"];
+const endpointsFiles = ["./server.js"]; 
 
 swaggerAutogen(outputFile, endpointsFiles, doc).then(() => {
   console.log("✅ swagger.json generated");
