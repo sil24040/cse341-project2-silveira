@@ -2,10 +2,13 @@
 const { ObjectId } = require("mongodb");
 const { getDB } = require("../config/db");
 
-const COLLECTION = "Items"; // your screenshot shows "Items" (capital I)
+// Use the exact collection name you created in Atlas
+// If your Atlas collection is "Items" (capital I), keep this.
+// If it's "items" lowercase, change it to "items".
+const COLLECTION = "Items";
 
 function isValidObjectId(id) {
-  return ObjectId.isValid(id) && String(new ObjectId(id)) === id;
+  return ObjectId.isValid(id);
 }
 
 // GET /items
@@ -15,7 +18,7 @@ async function getAllItems(req, res) {
     const items = await db.collection(COLLECTION).find({}).toArray();
     return res.status(200).json(items);
   } catch (err) {
-    console.error(err);
+    console.error("getAllItems error:", err);
     return res.status(500).json({ error: "Failed to fetch items" });
   }
 }
@@ -24,19 +27,18 @@ async function getAllItems(req, res) {
 async function getItemById(req, res) {
   try {
     const { id } = req.params;
+
     if (!isValidObjectId(id)) {
       return res.status(400).json({ error: "Invalid id format" });
     }
 
     const db = getDB();
-    const item = await db
-      .collection(COLLECTION)
-      .findOne({ _id: new ObjectId(id) });
+    const item = await db.collection(COLLECTION).findOne({ _id: new ObjectId(id) });
 
     if (!item) return res.status(404).json({ error: "Item not found" });
     return res.status(200).json(item);
   } catch (err) {
-    console.error(err);
+    console.error("getItemById error:", err);
     return res.status(500).json({ error: "Failed to fetch item" });
   }
 }
@@ -46,7 +48,6 @@ async function createItem(req, res) {
   try {
     const db = getDB();
 
-    // Basic validation (adjust to your actual fields)
     const {
       name,
       quantity,
@@ -72,13 +73,11 @@ async function createItem(req, res) {
     };
 
     const result = await db.collection(COLLECTION).insertOne(newItem);
-    const created = await db
-      .collection(COLLECTION)
-      .findOne({ _id: result.insertedId });
 
+    const created = await db.collection(COLLECTION).findOne({ _id: result.insertedId });
     return res.status(201).json(created);
   } catch (err) {
-    console.error(err);
+    console.error("createItem error:", err);
     return res.status(500).json({ error: "Failed to create item" });
   }
 }
@@ -87,13 +86,13 @@ async function createItem(req, res) {
 async function updateItem(req, res) {
   try {
     const { id } = req.params;
+
     if (!isValidObjectId(id)) {
       return res.status(400).json({ error: "Invalid id format" });
     }
 
     const db = getDB();
 
-    // Only allow updates to these fields
     const allowed = [
       "name",
       "quantity",
@@ -123,13 +122,10 @@ async function updateItem(req, res) {
       return res.status(404).json({ error: "Item not found" });
     }
 
-    const updated = await db
-      .collection(COLLECTION)
-      .findOne({ _id: new ObjectId(id) });
-
+    const updated = await db.collection(COLLECTION).findOne({ _id: new ObjectId(id) });
     return res.status(200).json(updated);
   } catch (err) {
-    console.error(err);
+    console.error("updateItem error:", err);
     return res.status(500).json({ error: "Failed to update item" });
   }
 }
@@ -138,14 +134,13 @@ async function updateItem(req, res) {
 async function deleteItem(req, res) {
   try {
     const { id } = req.params;
+
     if (!isValidObjectId(id)) {
       return res.status(400).json({ error: "Invalid id format" });
     }
 
     const db = getDB();
-    const result = await db
-      .collection(COLLECTION)
-      .deleteOne({ _id: new ObjectId(id) });
+    const result = await db.collection(COLLECTION).deleteOne({ _id: new ObjectId(id) });
 
     if (result.deletedCount === 0) {
       return res.status(404).json({ error: "Item not found" });
@@ -153,7 +148,7 @@ async function deleteItem(req, res) {
 
     return res.status(204).send();
   } catch (err) {
-    console.error(err);
+    console.error("deleteItem error:", err);
     return res.status(500).json({ error: "Failed to delete item" });
   }
 }

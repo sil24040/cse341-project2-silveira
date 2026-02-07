@@ -29,15 +29,13 @@ app.use((req, res, next) => {
 // Health check
 app.get("/", (req, res) => res.status(200).send("API is running ✅"));
 
-// Swagger: make host/scheme work on BOTH localhost and Render
+// Swagger UI (dynamic server URL so Try it Out works on Render + local)
 app.use("/api-docs", swaggerUi.serve, (req, res, next) => {
   const host = req.get("host");
   const scheme = req.headers["x-forwarded-proto"] || req.protocol;
 
-  // clone swagger so we don't mutate the imported JSON permanently
   const spec = JSON.parse(JSON.stringify(swaggerDocument));
-  spec.host = host;
-  spec.schemes = [scheme];
+  spec.servers = [{ url: `${scheme}://${host}` }];
 
   return swaggerUi.setup(spec)(req, res, next);
 });
