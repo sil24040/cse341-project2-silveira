@@ -2,6 +2,7 @@
 const express = require("express");
 const router = express.Router();
 const { body, param, validationResult } = require("express-validator");
+const { ensureAuth } = require("../middleware/auth");
 
 const {
   getAllItems,
@@ -11,12 +12,13 @@ const {
   deleteItem
 } = require("../controllers/itemsControllers");
 
+// helper to show validation errors
 function handleValidationErrors(req, res, next) {
   const errors = validationResult(req);
   if (!errors.isEmpty()) {
     return res.status(400).json({
       error: "Validation failed",
-      details: errors.array().map(e => ({
+      details: errors.array().map((e) => ({
         field: e.path,
         message: e.msg
       }))
@@ -25,6 +27,7 @@ function handleValidationErrors(req, res, next) {
   next();
 }
 
+// validate MongoId
 const validateId = [
   param("id")
     .isMongoId()
@@ -32,6 +35,7 @@ const validateId = [
   handleValidationErrors
 ];
 
+// ✅ CREATE: validate ALL fields (professor feedback)
 const validateCreateItem = [
   body("name")
     .trim()
@@ -39,41 +43,61 @@ const validateCreateItem = [
     .isLength({ max: 80 }).withMessage("name must be 80 chars or less"),
 
   body("quantity")
-    .optional({ nullable: true })
+    .notEmpty().withMessage("quantity is required")
     .isFloat({ min: 0 }).withMessage("quantity must be a number >= 0"),
 
   body("unit")
-    .optional({ nullable: true })
+    .notEmpty().withMessage("unit is required")
     .isString().withMessage("unit must be a string")
     .isLength({ max: 30 }).withMessage("unit must be 30 chars or less"),
 
   body("category")
-    .optional({ nullable: true })
+    .notEmpty().withMessage("category is required")
     .isString().withMessage("category must be a string")
     .isLength({ max: 40 }).withMessage("category must be 40 chars or less"),
 
   body("store")
-    .optional({ nullable: true })
+    .notEmpty().withMessage("store is required")
     .isString().withMessage("store must be a string")
     .isLength({ max: 40 }).withMessage("store must be 40 chars or less"),
 
   body("priority")
-    .optional({ nullable: true })
-    .isIn(["Low", "Medium", "High"]).withMessage("priority must be Low, Medium, or High"),
+    .notEmpty().withMessage("priority is required")
+    .isIn(["Low", "Medium", "High"])
+    .withMessage("priority must be Low, Medium, or High"),
 
   body("purchased")
-    .optional()
+    .notEmpty().withMessage("purchased is required")
     .isBoolean().withMessage("purchased must be true/false"),
 
   body("notes")
-    .optional({ nullable: true })
+    .notEmpty().withMessage("notes is required")
     .isString().withMessage("notes must be a string")
     .isLength({ max: 200 }).withMessage("notes must be 200 chars or less"),
 
   handleValidationErrors
 ];
 
+// ✅ UPDATE: optional fields (but validate if present)
+// Also ensures request isn't empty
 const validateUpdateItem = [
+  body().custom((value, { req }) => {
+    const allowed = [
+      "name",
+      "quantity",
+      "unit",
+      "category",
+      "store",
+      "priority",
+      "purchased",
+      "notes"
+    ];
+    const keys = Object.keys(req.body || {});
+    const hasAllowed = keys.some((k) => allowed.includes(k));
+    if (!hasAllowed) throw new Error("No valid fields to update");
+    return true;
+  }),
+
   body("name")
     .optional()
     .trim()
@@ -81,53 +105,51 @@ const validateUpdateItem = [
     .isLength({ max: 80 }).withMessage("name must be 80 chars or less"),
 
   body("quantity")
-    .optional({ nullable: true })
+    .optional()
     .isFloat({ min: 0 }).withMessage("quantity must be a number >= 0"),
 
   body("unit")
-    .optional({ nullable: true })
+    .optional()
     .isString().withMessage("unit must be a string")
     .isLength({ max: 30 }).withMessage("unit must be 30 chars or less"),
 
   body("category")
-    .optional({ nullable: true })
+    .optional()
     .isString().withMessage("category must be a string")
     .isLength({ max: 40 }).withMessage("category must be 40 chars or less"),
 
   body("store")
-    .optional({ nullable: true })
+    .optional()
     .isString().withMessage("store must be a string")
     .isLength({ max: 40 }).withMessage("store must be 40 chars or less"),
 
   body("priority")
-    .optional({ nullable: true })
-    .isIn(["Low", "Medium", "High"]).withMessage("priority must be Low, Medium, or High"),
+    .optional()
+    .isIn(["Low", "Medium", "High"])
+    .withMessage("priority must be Low, Medium, or High"),
 
   body("purchased")
     .optional()
     .isBoolean().withMessage("purchased must be true/false"),
 
   body("notes")
-    .optional({ nullable: true })
+    .optional()
     .isString().withMessage("notes must be a string")
     .isLength({ max: 200 }).withMessage("notes must be 200 chars or less"),
 
   handleValidationErrors
 ];
 
-// GET all
+// Routes
 router.get("/", getAllItems);
-
-// GET by id
 router.get("/:id", validateId, getItemById);
 
-// POST create
+// If you want POST protected too, add ensureAuth here.
+// router.post("/", ensureAuth, validateCreateItem, createItem);
 router.post("/", validateCreateItem, createItem);
 
-// PUT update
-router.put("/:id", validateId, validateUpdateItem, updateItem);
-
-// DELETE remove
-router.delete("/:id", validateId, deleteItem);
+// ✅ protect PUT + DELETE (matches screenshot/rubric idea)
+router.put("/:id", ensureAuth, validateId, validateUpdateItem, updateItem);
+router.delete("/:id", ensureAuth, validateId, deleteItem);
 
 module.exports = router;
