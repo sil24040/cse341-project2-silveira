@@ -2,9 +2,6 @@
 const { ObjectId } = require("mongodb");
 const { getDB } = require("../config/db");
 
-// Use the exact collection name you created in Atlas
-// If your Atlas collection is "Items" (capital I), keep this.
-// If it's "items" lowercase, change it to "items".
 const COLLECTION = "Items";
 
 function isValidObjectId(id) {
@@ -33,9 +30,14 @@ async function getItemById(req, res) {
     }
 
     const db = getDB();
-    const item = await db.collection(COLLECTION).findOne({ _id: new ObjectId(id) });
+    const item = await db
+      .collection(COLLECTION)
+      .findOne({ _id: new ObjectId(id) });
 
-    if (!item) return res.status(404).json({ error: "Item not found" });
+    if (!item) {
+      return res.status(404).json({ error: "Item not found" });
+    }
+
     return res.status(200).json(item);
   } catch (err) {
     console.error("getItemById error:", err);
@@ -59,22 +61,25 @@ async function createItem(req, res) {
       notes
     } = req.body;
 
-    if (!name) return res.status(400).json({ error: "name is required" });
-
     const newItem = {
       name,
-      quantity: quantity ?? null,
-      unit: unit ?? null,
-      category: category ?? null,
-      store: store ?? null,
-      priority: priority ?? null,
-      purchased: purchased ?? false,
-      notes: notes ?? null
+      quantity,
+      unit,
+      category,
+      store,
+      priority,
+      purchased,
+      notes,
+      createdAt: new Date(),
+      updatedAt: null
     };
 
     const result = await db.collection(COLLECTION).insertOne(newItem);
 
-    const created = await db.collection(COLLECTION).findOne({ _id: result.insertedId });
+    const created = await db
+      .collection(COLLECTION)
+      .findOne({ _id: result.insertedId });
+
     return res.status(201).json(created);
   } catch (err) {
     console.error("createItem error:", err);
@@ -105,13 +110,19 @@ async function updateItem(req, res) {
     ];
 
     const updates = {};
+
     for (const key of allowed) {
-      if (req.body[key] !== undefined) updates[key] = req.body[key];
+      if (req.body[key] !== undefined) {
+        updates[key] = req.body[key];
+      }
     }
 
     if (Object.keys(updates).length === 0) {
       return res.status(400).json({ error: "No valid fields to update" });
     }
+
+    // Add updatedAt timestamp
+    updates.updatedAt = new Date();
 
     const result = await db.collection(COLLECTION).updateOne(
       { _id: new ObjectId(id) },
@@ -122,7 +133,10 @@ async function updateItem(req, res) {
       return res.status(404).json({ error: "Item not found" });
     }
 
-    const updated = await db.collection(COLLECTION).findOne({ _id: new ObjectId(id) });
+    const updated = await db
+      .collection(COLLECTION)
+      .findOne({ _id: new ObjectId(id) });
+
     return res.status(200).json(updated);
   } catch (err) {
     console.error("updateItem error:", err);
@@ -140,7 +154,10 @@ async function deleteItem(req, res) {
     }
 
     const db = getDB();
-    const result = await db.collection(COLLECTION).deleteOne({ _id: new ObjectId(id) });
+
+    const result = await db
+      .collection(COLLECTION)
+      .deleteOne({ _id: new ObjectId(id) });
 
     if (result.deletedCount === 0) {
       return res.status(404).json({ error: "Item not found" });

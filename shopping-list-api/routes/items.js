@@ -146,7 +146,7 @@ router.get("/:id", validateId, getItemById);
 
 // If you want POST protected too, add ensureAuth here.
 // router.post("/", ensureAuth, validateCreateItem, createItem);
-router.post("/", validateCreateItem, createItem);
+router.post("/", ensureAuth, validateCreateItem, createItem);
 
 // ✅ protect PUT + DELETE (matches screenshot/rubric idea)
 router.put("/:id", ensureAuth, validateId, validateUpdateItem, updateItem);

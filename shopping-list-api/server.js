@@ -121,6 +121,7 @@ app.use("/api-docs", swaggerUi.serve, (req, res, next) => {
 
 // Routes
 app.use("/items", require("./routes/items"));
+app.use("/categories", require("./routes/categories"));   // ✅ NEW LINE ADDED
 
 const port = process.env.PORT || 3000;
 
